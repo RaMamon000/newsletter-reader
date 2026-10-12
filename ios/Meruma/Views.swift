@@ -15,6 +15,8 @@ struct RootView: View {
                 .tabItem { Label("国別", systemImage: "globe.asia.australia") }.tag(1)
             NavigationStack { GroupListView(kind: .genre).merumaDestinations() }
                 .tabItem { Label("ジャンル別", systemImage: "tag") }.tag(2)
+            NavigationStack { LearningsView().merumaDestinations() }
+                .tabItem { Label("学び", systemImage: "lightbulb") }.tag(4)
             NavigationStack { SettingsView() }
                 .tabItem { Label("設定", systemImage: "gearshape") }.tag(3)
         }
@@ -77,10 +79,37 @@ struct IssueRow: View {
                 Text("\(issue.newsletter_name)　\(issue.numberLabel)").font(.caption).foregroundStyle(.secondary)
                 Text(issue.title).font(.headline).fontWeight(unread ? .bold : .regular)
                 Text(issue.headline).font(.subheadline).foregroundStyle(.secondary).lineSpacing(4)
-                Text(DateParse.label(issue.dateValue)).font(.caption2).foregroundStyle(.tertiary)
+                HStack(spacing: 8) {
+                    Text(DateParse.label(issue.dateValue)).font(.caption2).foregroundStyle(.tertiary)
+                    if store.notes[issue.id] != nil {
+                        Label("学び済み", systemImage: "lightbulb.fill").font(.caption2).foregroundStyle(.yellow)
+                    }
+                }
             }
         }
         .padding(.vertical, 4)
+    }
+}
+
+// MARK: 学び（一言学びの一覧）
+struct LearningsView: View {
+    @EnvironmentObject var store: Store
+    var body: some View {
+        List(store.notes.values.sorted { $0.date > $1.date }) { n in
+            NavigationLink(value: IssueRoute(id: n.issueID, articleIdx: nil)) {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(n.text).font(.body).lineSpacing(6)
+                    Text("\(n.issueTitle)　\(DateParse.label(n.date))").font(.caption).foregroundStyle(.secondary)
+                }.padding(.vertical, 4)
+            }
+        }
+        .navigationTitle("学び")
+        .overlay {
+            if store.notes.isEmpty {
+                ContentUnavailableView("まだ学びがありません", systemImage: "lightbulb",
+                                       description: Text("号を読んだら、いちばん下の「一言学び」に書いてください"))
+            }
+        }
     }
 }
 
@@ -165,6 +194,8 @@ struct IssueView: View {
                         articleBlock(a).id(a.idx)
                     }
 
+                    LearningBox(issueID: i.id, issueTitle: "\(i.newsletter_name)　\(i.numberLabel)　\(i.title)")
+
                     if let url = URL(string: i.gmail_link) {
                         Link(destination: url) { Label("Gmailで開く", systemImage: "arrow.up.right.square").frame(maxWidth: .infinity) }
                             .buttonStyle(.borderedProminent).controlSize(.large)
@@ -223,6 +254,46 @@ struct IssueView: View {
                         .font(.callout).foregroundStyle(.secondary)
                 }
             }
+        }
+    }
+}
+
+// 号の終わりに出す「一言学び」の入力欄
+struct LearningBox: View {
+    @EnvironmentObject var store: Store
+    let issueID: String
+    let issueTitle: String
+    @State private var text = ""
+    @State private var loaded = false
+    @FocusState private var focused: Bool
+
+    var body: some View {
+        let saved = store.notes[issueID]
+        VStack(alignment: .leading, spacing: 10) {
+            Divider()
+            Label("一言学び", systemImage: "lightbulb").font(.headline)
+            TextField("この号でいちばん残ったことを一言で", text: $text, axis: .vertical)
+                .lineLimit(2...6)
+                .focused($focused)
+                .padding(12)
+                .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 12))
+            HStack {
+                if let saved, !focused {
+                    Text("保存済み　\(DateParse.label(saved.date))").font(.caption).foregroundStyle(.secondary)
+                }
+                Spacer()
+                Button(saved == nil ? "保存" : "更新") {
+                    store.saveNote(issueID: issueID, title: issueTitle, text: text)
+                    focused = false
+                }
+                .buttonStyle(.borderedProminent)
+                .disabled(text.trimmingCharacters(in: .whitespacesAndNewlines) == (saved?.text ?? ""))
+            }
+        }
+        .onAppear {
+            guard !loaded else { return }
+            text = store.notes[issueID]?.text ?? ""
+            loaded = true
         }
     }
 }

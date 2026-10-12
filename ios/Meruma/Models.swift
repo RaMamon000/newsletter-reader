@@ -92,3 +92,12 @@ enum DateParse {
 enum FilterKind: String, Hashable { case country, genre }
 struct FilterRoute: Hashable { let kind: FilterKind; let name: String }
 struct IssueRoute: Hashable { let id: String; let articleIdx: Int? }
+
+// 号ごとの「一言学び」
+struct Learning: Codable, Identifiable {
+    let issueID: String
+    let issueTitle: String
+    let text: String
+    let date: Date
+    var id: String { issueID }
+}

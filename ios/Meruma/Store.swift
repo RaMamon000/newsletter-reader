@@ -17,6 +17,7 @@ final class Store: ObservableObject {
     @Published var openIssueID: String?
     @Published var deviceToken: String
     @Published var notifStatus: String = "確認中"
+    @Published var notes: [String: Learning] = [:]
 
     private let readKey = "readIssueIDs"
     private let updatedKey = "lastUpdated"
@@ -32,6 +33,28 @@ final class Store: ObservableObject {
         try? FileManager.default.createDirectory(at: base.appendingPathComponent("issues"), withIntermediateDirectories: true)
         dir = base
         loadLocal()
+        loadNotes()
+    }
+
+    // MARK: 一言学び（端末内だけに保存。GitHub には送らない）
+    private var notesURL: URL { dir.deletingLastPathComponent().appendingPathComponent("learnings.json") }
+
+    private func loadNotes() {
+        guard let data = try? Data(contentsOf: notesURL),
+              let list = try? JSONDecoder().decode([Learning].self, from: data) else { return }
+        notes = Dictionary(list.map { ($0.issueID, $0) }, uniquingKeysWith: { a, _ in a })
+    }
+
+    func saveNote(issueID: String, title: String, text: String) {
+        let t = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        if t.isEmpty {
+            notes[issueID] = nil
+        } else {
+            notes[issueID] = Learning(issueID: issueID, issueTitle: title, text: t, date: Date())
+        }
+        if let data = try? JSONEncoder().encode(Array(notes.values)) {
+            try? data.write(to: notesURL, options: [.atomic, .completeFileProtection])
+        }
     }
 
     // MARK: 読み込み（キャッシュ → サンプル）
