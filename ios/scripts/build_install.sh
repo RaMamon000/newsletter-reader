@@ -14,7 +14,10 @@ xcodegen generate >/dev/null || { echo "BUILD FAILED (xcodegen)"; exit 1; }
 echo "== build"
 xcodebuild -project Meruma.xcodeproj -scheme Meruma -configuration Debug \
   -destination "platform=iOS,id=$UDID" -derivedDataPath "$DERIVED" \
-  -allowProvisioningUpdates build 2>&1 | grep -E 'error:|BUILD (SUCCEEDED|FAILED)'
+  -allowProvisioningUpdates build > "$DERIVED.build.log" 2>&1
+grep -E 'error:|BUILD (SUCCEEDED|FAILED)' "$DERIVED.build.log"
+# ビルドに失敗したら、前回のアプリを入れずにここで止める
+grep -q 'BUILD SUCCEEDED' "$DERIVED.build.log" || { echo "BUILD FAILED（インストールしません）"; exit 1; }
 APP=$DERIVED/Build/Products/Debug-iphoneos/Meruma.app
 [ -d "$APP" ] || { echo "BUILD FAILED (no app)"; exit 1; }
 

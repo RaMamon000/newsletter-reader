@@ -101,3 +101,11 @@ struct Learning: Codable, Identifiable {
     let date: Date
     var id: String { issueID }
 }
+
+// 「きょうの記録」へ渡す形（きょうの記録側の MerumaImport.swift と同じ形にそろえる）
+struct SharedLearning: Codable {
+    let issueID: String
+    let issueTitle: String
+    let text: String
+    let date: Date
+}

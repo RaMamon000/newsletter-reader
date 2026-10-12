@@ -34,6 +34,7 @@ final class Store: ObservableObject {
         dir = base
         loadLocal()
         loadNotes()
+        shareWithLifeLog()
     }
 
     // MARK: 一言学び（端末内だけに保存。GitHub には送らない）
@@ -54,6 +55,17 @@ final class Store: ObservableObject {
         }
         if let data = try? JSONEncoder().encode(Array(notes.values)) {
             try? data.write(to: notesURL, options: [.atomic, .completeFileProtection])
+        }
+        shareWithLifeLog()
+    }
+
+    /// 「きょうの記録」と共有する置き場（App Group）にも書き出す。きょうの記録が開いたときに取り込む
+    static let lifeLogGroup = "group.com.ramamon.lifelog"
+    static let sharedLearningsKey = "meruma.learnings"
+    func shareWithLifeLog() {
+        let list = notes.values.map { SharedLearning(issueID: $0.issueID, issueTitle: $0.issueTitle, text: $0.text, date: $0.date) }
+        if let data = try? JSONEncoder().encode(list) {
+            UserDefaults(suiteName: Self.lifeLogGroup)?.set(data, forKey: Self.sharedLearningsKey)
         }
     }
 
