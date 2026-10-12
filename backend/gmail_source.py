@@ -44,10 +44,17 @@ def _decode_part(part: dict) -> str:
             m = re.search(r'charset="?([\w\-]+)', h["value"], re.I)
             if m:
                 charset = m.group(1)
+    raw = _b64(data)
+    # Gmail API は本文を UTF-8 に変換して返す（ヘッダーの charset=ISO-2022-JP のままでも中身は UTF-8）。
+    # まず UTF-8 で厳密に読み、読めないときだけヘッダーの charset を使う。
     try:
-        return _b64(data).decode(charset, errors="replace")
+        return raw.decode("utf-8")
+    except UnicodeDecodeError:
+        pass
+    try:
+        return raw.decode(charset, errors="replace")
     except LookupError:
-        return _b64(data).decode("utf-8", errors="replace")
+        return raw.decode("utf-8", errors="replace")
 
 
 def _walk(part: dict):
