@@ -125,12 +125,12 @@ def test_pipeline_end_to_end(tmp_path, capsys):
         assert leak not in out, leak
     idx = cu.read_enc(tmp_path / "index.json.enc", KEY)
     assert [i["date"] for i in idx["issues"]] == sorted([i["date"] for i in idx["issues"]], reverse=True)
-    assert idx["issues"][0]["id"] == "nl1-20261012-cccccccc"
-    first = next(i for i in idx["issues"] if i["id"] == "nl1-20261005-aaaaaaaa")
+    assert idx["issues"][0]["id"] == "nl1-20261012-cccccccc33"
+    first = next(i for i in idx["issues"] if i["id"] == "nl1-20261005-aaaaaaaa11")
     assert len(first["headline"]) == 60
     assert first["articles"][0]["countries"] == ["米国", "ペルー"]
     assert first["articles"][0]["genres"] == ["選挙", "その他"]
-    issue = cu.read_enc(tmp_path / "issues" / "nl1-20261005-aaaaaaaa.json.enc", KEY)
+    issue = cu.read_enc(tmp_path / "issues" / "nl1-20261005-aaaaaaaa11.json.enc", KEY)
     assert "配信停止" not in issue["full_text"]
     for a in issue["articles"]:
         assert a["body"] in issue["full_text"]  # 原文の切り出し
@@ -217,3 +217,10 @@ def test_apns_jwt_and_payload():
     assert jwt.get_unverified_header(apns.make_jwt(cfg))["kid"] == "KEYID12345"
     p = apns.build_payload("誌", "本", "id1")
     assert p["issue_id"] == "id1" and p["aps"]["alert"]["title"] == "誌"
+
+
+def test_issue_ids_do_not_collide_on_same_day():
+    # 同じ日に続けて届いたメールは番号の先頭8文字が重なる（2026-01-15 に3通で実際に起きた）
+    a = pl.make_issue_id("nl2", ms(2026, 1, 15), "19bbefb6c886c5e3")
+    b = pl.make_issue_id("nl2", ms(2026, 1, 15), "19bbefb6cbe397a8")
+    assert a != b

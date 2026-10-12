@@ -44,7 +44,7 @@ def classify(subject: str) -> str | None:
 
 def make_issue_id(key: str, date_ms: int, mid: str) -> str:
     d = datetime.fromtimestamp(date_ms / 1000, JST).strftime("%Y%m%d")
-    return f"{key}-{d}-{mid[:8]}"
+    return f"{key}-{d}-{mid}"  # 同じ日に続けて届くと先頭8文字が重なるので、番号は全部使う
 
 
 def number_lines(text: str) -> tuple[list[str], str]:
