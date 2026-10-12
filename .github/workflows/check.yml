@@ -1,9 +1,8 @@
 name: check
 
 on:
-  # 過去分の処理が済むまで止めておく（済んだら下の2行を戻す）
-  # schedule:
-  #   - cron: "*/30 * * * *"
+  schedule:
+    - cron: "*/30 * * * *"
   workflow_dispatch:
     inputs:
       backfill:
