@@ -1,0 +1,14 @@
+.secrets/
+ios/**/Secrets.swift
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+venv/
+.DS_Store
+xcuserdata/
+*.xcuserstate
+*.p8
+
+# 設計メモ（差出人・誌名が書いてあるので公開しない）
+SPEC.md

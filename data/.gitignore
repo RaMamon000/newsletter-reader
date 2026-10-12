@@ -1,0 +1,5 @@
+# 暗号文以外は公開リポに入れない
+*
+!.gitignore
+!*.json.enc
+!issues/
