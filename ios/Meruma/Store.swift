@@ -74,6 +74,7 @@ final class Store: ObservableObject {
         if let data = try? Data(contentsOf: dir.appendingPathComponent("index.json.enc")),
            let idx = decodeIndex(data) {
             issues = idx.issues; usingSample = false
+            markPastIssuesReadOnce()
         } else if let url = Bundle.main.url(forResource: "sample_index.json", withExtension: "enc"),
                   let data = try? Data(contentsOf: url), let idx = decodeIndex(data) {
             issues = idx.issues; usingSample = true
@@ -110,6 +111,7 @@ final class Store: ObservableObject {
             try? enc.write(to: dir.appendingPathComponent("index.json.enc"))
             issues = idx.issues
             usingSample = false
+            markPastIssuesReadOnce()
             lastUpdated = Date()
             UserDefaults.standard.set(lastUpdated, forKey: updatedKey)
             lastError = nil
@@ -122,6 +124,18 @@ final class Store: ObservableObject {
             let code = (error as NSError)
             lastError = code.domain == "fetch" ? "取得できませんでした（HTTP \(code.code)）" : "取得できませんでした（\(code.domain)）"
         }
+    }
+
+    /// 過去分をまとめて取り込んだときの未読を、1回だけ整理する。各誌の最新号だけ未読のまま残す
+    private func markPastIssuesReadOnce() {
+        let flag = "pastIssuesMarkedRead.v1"
+        guard !UserDefaults.standard.bool(forKey: flag), issues.count > 2 else { return }
+        let latest = Dictionary(grouping: issues, by: \.newsletter)
+            .compactMap { $0.value.max { $0.dateValue < $1.dateValue }?.id }
+        for i in issues where !latest.contains(i.id) { readIDs.insert(i.id) }
+        UserDefaults.standard.set(Array(readIDs), forKey: readKey)
+        UserDefaults.standard.set(true, forKey: flag)
+        updateBadge()
     }
 
     private func issueURL(_ id: String) -> URL { dir.appendingPathComponent("issues/\(id).json.enc") }
