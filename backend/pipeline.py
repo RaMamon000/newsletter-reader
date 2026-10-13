@@ -115,7 +115,7 @@ def build_issue(key: str, mid: str, msg: dict, analysis: dict) -> dict:
         "title": analysis.get("title", ""),
         "date": datetime.fromtimestamp(msg["date_ms"] / 1000, JST).isoformat(),
         "headline": (analysis.get("headline") or "")[:60],
-        "gmail_link": f"https://mail.google.com/mail/u/?authuser={ACCOUNT}#all/{mid}",
+        "gmail_link": "" if mid.startswith("eml-") else f"https://mail.google.com/mail/u/?authuser={ACCOUNT}#all/{mid}",
         "full_text": full_text,
         "summary": {k: list(s.get(k, [])) for k in ("toc", "points", "changes", "watch_next")},
         "articles": articles,
@@ -262,7 +262,8 @@ def main(argv=None) -> int:
         return 2
     try:
         key_bytes = crypto_util.load_key()
-        source = gmail_source.GmailSource(info)
+        import inbox
+        source = inbox.InboxSource(gmail_source.GmailSource(info), Path(a.data_dir) / "inbox", key_bytes)
         analyzer = None
         if not a.dry_run:
             import analyzer as an

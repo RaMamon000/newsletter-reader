@@ -224,3 +224,24 @@ def test_issue_ids_do_not_collide_on_same_day():
     a = pl.make_issue_id("nl2", ms(2026, 1, 15), "19bbefb6c886c5e3")
     b = pl.make_issue_id("nl2", ms(2026, 1, 15), "19bbefb6cbe397a8")
     assert a != b
+
+
+def test_inbox_eml_is_processed_like_gmail(tmp_path):
+    import inbox
+    raw = ("From: x <a@example.invalid>\r\nSubject: =?UTF-8?B?" + base64.b64encode("【テスト誌A】第5号".encode()).decode()
+           + "?=\r\nDate: Tue, 13 Oct 2026 07:10:00 +0900\r\nMIME-Version: 1.0\r\n"
+           "Content-Type: text/html; charset=utf-8\r\n\r\n<h2>見出し</h2><p>本文です</p>\r\n").encode()
+    msg = inbox.parse_eml(raw)
+    assert msg["subject"] == "【テスト誌A】第5号" and "見出し\n" in msg["text"] and "本文です" in msg["text"]
+    mid = inbox.eml_id(raw)
+    cu.write_enc(tmp_path / "inbox" / f"{mid}.json.enc", msg, KEY)
+
+    class Empty:
+        def list_ids(self, all_pages): return []
+    src = inbox.InboxSource(Empty(), tmp_path / "inbox", KEY)
+    assert src.list_ids(False) == [mid]
+    res = pl.run(src, FakeAnalyzer(), tmp_path, KEY)
+    assert res["processed"] == 1
+    issue = res["new_issues"][0]
+    assert issue["id"].endswith(mid) and issue["gmail_link"] == ""
+    assert pl.run(src, FakeAnalyzer(), tmp_path, KEY)["processed"] == 0  # 2回目は処理しない
